@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Product, Category } from '@/types/product';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import ProductCard from './ProductCard';
@@ -12,10 +13,15 @@ interface ProductsClientProps {
 }
 
 export default function ProductsClient({ initialProducts, categories }: ProductsClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Initialize state from URL parameters
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>((searchParams.get('sort') as 'asc' | 'desc' | 'none') || 'none');
   const [displayCount, setDisplayCount] = useState(10); // Show 10 items initially
   const [isLoading, setIsLoading] = useState(false);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Filter and sort products
@@ -79,16 +85,33 @@ export default function ProductsClient({ initialProducts, categories }: Products
     };
   }, [hasMore, isLoading, loadMore]);
 
+  // Update URL with current filters
+  const updateURL = useCallback((category: string, sort: string) => {
+    const params = new URLSearchParams();
+    if (category !== 'all') params.set('category', category);
+    if (sort !== 'none') params.set('sort', sort);
+    const queryString = params.toString();
+    router.push(queryString ? `?${queryString}` : '/products', { scroll: false });
+  }, [router]);
+
   // Handle category change and reset display count
   const handleCategoryChange = (category: string) => {
+    setIsFilterLoading(true);
     setSelectedCategory(category);
     setDisplayCount(10);
+    updateURL(category, sortOrder);
+    // Simulate brief loading for smooth transition
+    setTimeout(() => setIsFilterLoading(false), 300);
   };
 
   // Handle sort change and reset display count
   const handleSortChange = (sort: 'asc' | 'desc' | 'none') => {
+    setIsFilterLoading(true);
     setSortOrder(sort);
     setDisplayCount(10);
+    updateURL(selectedCategory, sort);
+    // Simulate brief loading for smooth transition
+    setTimeout(() => setIsFilterLoading(false), 300);
   };
 
   return (
@@ -117,6 +140,7 @@ export default function ProductsClient({ initialProducts, categories }: Products
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all bg-white appearance-none cursor-pointer text-gray-900 font-medium hover:border-gray-400"
+                aria-label="Filter products by category"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23374151' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
                   backgroundPosition: 'right 0.75rem center',
@@ -144,6 +168,7 @@ export default function ProductsClient({ initialProducts, categories }: Products
                 value={sortOrder}
                 onChange={(e) => handleSortChange(e.target.value as 'asc' | 'desc' | 'none')}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all bg-white appearance-none cursor-pointer text-gray-900 font-medium hover:border-gray-400"
+                aria-label="Sort products by price"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23374151' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
                   backgroundPosition: 'right 0.75rem center',
@@ -160,17 +185,56 @@ export default function ProductsClient({ initialProducts, categories }: Products
           </div>
 
           {/* Results count */}
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {displayedProducts.length} of {filteredAndSortedProducts.length} products
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Showing <span className="font-semibold text-gray-900">{displayedProducts.length}</span> of{' '}
+              <span className="font-semibold text-gray-900">{filteredAndSortedProducts.length}</span> products
+            </span>
+            {(selectedCategory !== 'all' || sortOrder !== 'none') && (
+              <button
+                onClick={() => {
+                  setIsFilterLoading(true);
+                  setSelectedCategory('all');
+                  setSortOrder('none');
+                  setDisplayCount(10);
+                  router.push('/products', { scroll: false });
+                  setTimeout(() => setIsFilterLoading(false), 300);
+                }}
+                className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+                aria-label="Clear all filters"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {displayedProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+        {isFilterLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(10)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {displayedProducts.map((product, index) => (
+              <div
+                key={product.id}
+                className="animate-fadeInUp"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animationFillMode: 'both'
+                }}
+              >
+                <ProductCard product={product} index={index} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Loading Skeleton for Infinite Scroll */}
         {isLoading && (
@@ -216,7 +280,7 @@ export default function ProductsClient({ initialProducts, categories }: Products
         )}
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;
@@ -226,6 +290,10 @@ export default function ProductsClient({ initialProducts, categories }: Products
             opacity: 1;
             transform: translateY(0);
           }
+        }
+        
+        .animate-fadeInUp {
+          animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
       `}</style>
 
