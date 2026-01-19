@@ -37,7 +37,7 @@ export default function ProductsClient({ initialProducts, categories }: Products
     return products;
   }, [initialProducts, selectedCategory, sortOrder]);
 
-  // Products to display (with lazy loading)
+  // Products to display (with lazy loading) - resets to 10 when filters change
   const displayedProducts = useMemo(() => {
     return filteredAndSortedProducts.slice(0, displayCount);
   }, [filteredAndSortedProducts, displayCount]);
@@ -79,10 +79,17 @@ export default function ProductsClient({ initialProducts, categories }: Products
     };
   }, [hasMore, isLoading, loadMore]);
 
-  // Reset display count when filters change
-  useEffect(() => {
+  // Handle category change and reset display count
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
     setDisplayCount(10);
-  }, [selectedCategory, sortOrder]);
+  };
+
+  // Handle sort change and reset display count
+  const handleSortChange = (sort: 'asc' | 'desc' | 'none') => {
+    setSortOrder(sort);
+    setDisplayCount(10);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -108,12 +115,19 @@ export default function ProductsClient({ initialProducts, categories }: Products
               <select
                 id="category"
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all bg-white appearance-none cursor-pointer text-gray-900 font-medium hover:border-gray-400"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23374151' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.25em 1.25em',
+                  paddingRight: '2.5rem',
+                }}
               >
-                <option value="all">All Categories</option>
+                <option value="all" className="text-gray-900 bg-white py-2">All Categories</option>
                 {categories.map((category) => (
-                  <option key={category.slug} value={category.slug}>
+                  <option key={category.slug} value={category.slug} className="text-gray-900 bg-white py-2 capitalize">
                     {category.name}
                   </option>
                 ))}
@@ -128,12 +142,19 @@ export default function ProductsClient({ initialProducts, categories }: Products
               <select
                 id="sort"
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc' | 'none')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onChange={(e) => handleSortChange(e.target.value as 'asc' | 'desc' | 'none')}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all bg-white appearance-none cursor-pointer text-gray-900 font-medium hover:border-gray-400"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23374151' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.25em 1.25em',
+                  paddingRight: '2.5rem',
+                }}
               >
-                <option value="none">Default</option>
-                <option value="asc">Price: Low to High</option>
-                <option value="desc">Price: High to Low</option>
+                <option value="none" className="text-gray-900 bg-white py-2">Default</option>
+                <option value="asc" className="text-gray-900 bg-white py-2">Price: Low to High</option>
+                <option value="desc" className="text-gray-900 bg-white py-2">Price: High to Low</option>
               </select>
             </div>
           </div>
@@ -182,7 +203,7 @@ export default function ProductsClient({ initialProducts, categories }: Products
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
-              You've reached the end
+              You&apos;ve reached the end
             </div>
           </div>
         )}
