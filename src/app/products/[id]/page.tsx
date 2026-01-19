@@ -14,9 +14,10 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   try {
-    const product = await fetchProductById(params.id);
+    const product = await fetchProductById(id);
     
     return {
       title: `${product.title} - Product Details`,
@@ -37,11 +38,12 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 // Enable ISR
 export const revalidate = 3600;
 
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let product;
   
   try {
-    product = await fetchProductById(params.id);
+    product = await fetchProductById(id);
   } catch {
     notFound();
   }
